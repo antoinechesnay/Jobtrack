@@ -4,6 +4,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import { GoogleGenAI, Type } from "@google/genai";
+import { verifyToken } from './middleware/auth.js';
+import { db } from './firebaseAdmin.js';
 
 dotenv.config();
 
@@ -32,6 +34,7 @@ const limiter = rateLimit({
     legacyHeaders: false,
 });
 app.use('/api/', limiter);
+app.use('/api/', verifyToken);
 
 app.use(express.json());
 
@@ -67,6 +70,52 @@ const handleError = (res, error, context) => {
 app.get('/health', (req, res) => {
     res.status(200).send('OK');
 });
+
+// --- Job CRUD Endpoints ---
+
+app.get('/api/jobs', async (req, res) => {
+    try {
+        const jobsSnapshot = await db.collection('users').doc(req.user.uid).collection('jobs').get();
+        const jobs = jobsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.json(jobs);
+    } catch (error) {
+        handleError(res, error, "Get Jobs");
+    }
+});
+
+app.post('/api/jobs', async (req, res) => {
+    try {
+        const job = req.body;
+        // Ensure we don't overwrite the ID if passed, or let Firestore generate one
+        const docRef = await db.collection('users').doc(req.user.uid).collection('jobs').add(job);
+        res.json({ id: docRef.id, ...job });
+    } catch (error) {
+        handleError(res, error, "Add Job");
+    }
+});
+
+app.put('/api/jobs/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const job = req.body;
+        await db.collection('users').doc(req.user.uid).collection('jobs').doc(id).update(job);
+        res.json({ id, ...job });
+    } catch (error) {
+        handleError(res, error, "Update Job");
+    }
+});
+
+app.delete('/api/jobs/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await db.collection('users').doc(req.user.uid).collection('jobs').doc(id).delete();
+        res.json({ success: true, id });
+    } catch (error) {
+        handleError(res, error, "Delete Job");
+    }
+});
+
+// --- AI Endpoints ---
 
 app.post('/api/search-jobs', async (req, res) => {
     try {

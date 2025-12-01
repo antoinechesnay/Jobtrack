@@ -12,6 +12,28 @@ import { CoverLetterGenerator } from './components/CoverLetterGenerator';
 import { parseCompanyData } from './utils';
 import { RAW_OCR_DATA } from './constants';
 import { Company, Job, JobStatus, SearchResult } from './types';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { Login } from './components/Login';
+import { Signup } from './components/Signup';
+import { getJobs, addJob as apiAddJob, updateJob as apiUpdateJob, deleteJob as apiDeleteJob } from './services/jobService';
+
+const PrivateRoute = ({ children }: { children: React.ReactElement }) => {
+  const { currentUser, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return <Navigate to="/login" />;
+  }
+
+  return children;
+};
 
 const App: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -26,41 +48,12 @@ const App: React.FC = () => {
   const [searchAdvice, setSearchAdvice] = useState<Record<string, string>>({});
   const [searchCvContext, setSearchCvContext] = useState<{ searchQuery: string, skills: string[] } | null>(null);
 
+  const { currentUser } = useAuth();
+
   useEffect(() => {
     // Hydrate companies from the OCR data
     const parsedCompanies = parseCompanyData(RAW_OCR_DATA);
     setCompanies(parsedCompanies);
-
-    // Load initial sample jobs or locaStorage (mock for now)
-    const initialJobs: Job[] = [
-      {
-        id: '1',
-        companyName: 'Google',
-        position: 'Senior React Engineer',
-        status: JobStatus.APPLIED,
-        dateApplied: '2023-10-25',
-        location: 'London, UK',
-        notes: 'Referral from John Doe'
-      },
-      {
-        id: '2',
-        companyName: 'Microsoft',
-        position: 'Frontend Developer',
-        status: JobStatus.TO_BE_APPLIED,
-        location: 'Remote',
-        notes: 'Need to update CV first'
-      },
-      {
-        id: '3',
-        companyName: 'Amazon',
-        position: 'UX Enineer',
-        status: JobStatus.NEXT_ROUND,
-        dateApplied: '2023-10-20',
-        location: 'Berlin, DE',
-        notes: 'Interview scheduled for Friday'
-      }
-    ];
-    setJobs(initialJobs);
 
     // Check for API Key
     if (process.env.API_KEY) {
@@ -68,59 +61,94 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const addJob = (job: Job) => {
-    setJobs(prev => [...prev, job]);
+  useEffect(() => {
+    const fetchJobs = async () => {
+      if (currentUser) {
+        const userJobs = await getJobs();
+        setJobs(userJobs);
+      } else {
+        setJobs([]);
+      }
+    };
+    fetchJobs();
+  }, [currentUser]);
+
+  const addJob = async (job: Job) => {
+    // Optimistic update or wait for server? Let's wait for server to get ID
+    const { id, ...jobData } = job; // Remove ID if it's temporary
+    const newJob = await apiAddJob(jobData);
+    if (newJob) {
+      setJobs(prev => [...prev, newJob]);
+    }
   };
 
-  const updateJobStatus = (id: string, status: JobStatus) => {
+  const updateJobStatus = async (id: string, status: JobStatus) => {
+    // Optimistic update
     setJobs(prev => prev.map(job => job.id === id ? { ...job, status } : job));
+    await apiUpdateJob(id, { status });
   };
 
-  const removeJob = (id: string) => {
+  const removeJob = async (id: string) => {
+    // Optimistic update
     setJobs(prev => prev.filter(job => job.id !== id));
+    await apiDeleteJob(id);
   };
 
   return (
     <HashRouter>
-      <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden font-sans">
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-7xl mx-auto p-4 md:p-8">
-            <ApiKeyBanner isSet={isApiKeySet} />
-            <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<Dashboard jobs={jobs} companies={companies} />} />
-              <Route path="/companies" element={<CompanyList companies={companies} onFindJobs={(company) => console.log(company)} />} />
-              <Route path="/board" element={<JobBoard jobs={jobs} onUpdateStatus={updateJobStatus} onDelete={removeJob} />} />
-              <Route
-                path="/search"
-                element={
-                  <JobSearch
-                    companies={companies}
-                    onAddJob={addJob}
-                    // Pass persisted state
-                    query={searchQuery}
-                    setQuery={setSearchQuery}
-                    location={searchLocation}
-                    setLocation={setSearchLocation}
-                    results={searchResults}
-                    setResults={setSearchResults}
-                    matchScores={searchMatchScores}
-                    setMatchScores={setSearchMatchScores}
-                    advice={searchAdvice}
-                    setAdvice={setSearchAdvice}
-                    cvContext={searchCvContext}
-                    setCvContext={setSearchCvContext}
-                  />
-                }
-              />
-              <Route path="/cv-analysis" element={<CVAnalyzer />} />
-              <Route path="/interview-prep" element={<InterviewPrep />} />
-              <Route path="/cover-letter" element={<CoverLetterGenerator />} />
-            </Routes>
-          </div>
-        </main>
-      </div>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+
+          <Route
+            path="/*"
+            element={
+              <PrivateRoute>
+                <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden font-sans">
+                  <Sidebar />
+                  <main className="flex-1 overflow-y-auto">
+                    <div className="max-w-7xl mx-auto p-4 md:p-8">
+                      <ApiKeyBanner isSet={isApiKeySet} />
+                      <Routes>
+                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                        <Route path="/dashboard" element={<Dashboard jobs={jobs} companies={companies} />} />
+                        <Route path="/companies" element={<CompanyList companies={companies} onFindJobs={(company) => console.log(company)} />} />
+                        <Route path="/board" element={<JobBoard jobs={jobs} onUpdateStatus={updateJobStatus} onDelete={removeJob} />} />
+                        <Route
+                          path="/search"
+                          element={
+                            <JobSearch
+                              companies={companies}
+                              onAddJob={addJob}
+                              // Pass persisted state
+                              query={searchQuery}
+                              setQuery={setSearchQuery}
+                              location={searchLocation}
+                              setLocation={setSearchLocation}
+                              results={searchResults}
+                              setResults={setSearchResults}
+                              matchScores={searchMatchScores}
+                              setMatchScores={setSearchMatchScores}
+                              advice={searchAdvice}
+                              setAdvice={setSearchAdvice}
+                              cvContext={searchCvContext}
+                              setCvContext={setSearchCvContext}
+                            />
+                          }
+                        />
+                        <Route path="/cv-analysis" element={<CVAnalyzer />} />
+                        <Route path="/interview-prep" element={<InterviewPrep />} />
+                        <Route path="/cover-letter" element={<CoverLetterGenerator />} />
+                      </Routes>
+                    </div>
+                  </main>
+                </div>
+              </PrivateRoute>
+            }
+          />
+        </Routes>
+      </AuthProvider>
     </HashRouter>
   );
 };
