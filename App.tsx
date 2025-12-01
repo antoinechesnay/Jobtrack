@@ -54,11 +54,6 @@ const App: React.FC = () => {
     // Hydrate companies from the OCR data
     const parsedCompanies = parseCompanyData(RAW_OCR_DATA);
     setCompanies(parsedCompanies);
-
-    // Check for API Key
-    if (process.env.API_KEY) {
-      setIsApiKeySet(true);
-    }
   }, []);
 
   useEffect(() => {
@@ -109,7 +104,6 @@ const App: React.FC = () => {
                   <Sidebar />
                   <main className="flex-1 overflow-y-auto">
                     <div className="max-w-7xl mx-auto p-4 md:p-8">
-                      <ApiKeyBanner isSet={isApiKeySet} />
                       <Routes>
                         <Route path="/" element={<Navigate to="/dashboard" replace />} />
                         <Route path="/dashboard" element={<Dashboard jobs={jobs} companies={companies} />} />
