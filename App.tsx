@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Briefcase, Search, Settings, Building2, Plus, FileText, MonitorPlay, PenTool } from 'lucide-react';
+import { HashRouter, Routes, Route, NavLink, useLocation, Navigate, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, Briefcase, Search, Settings, Building2, Plus, FileText, MonitorPlay, PenTool, LogOut } from 'lucide-react';
 import { CompanyList } from './components/CompanyList';
 import { JobBoard } from './components/JobBoard';
 import { Dashboard } from './components/Dashboard';
@@ -16,6 +16,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Login } from './components/Login';
 import { Signup } from './components/Signup';
 import { getJobs, addJob as apiAddJob, updateJob as apiUpdateJob, deleteJob as apiDeleteJob } from './services/jobService';
+import { auth } from './firebase';
+import { signOut } from 'firebase/auth';
 
 const PrivateRoute = ({ children }: { children: React.ReactElement }) => {
   const { currentUser, loading } = useAuth();
@@ -149,6 +151,16 @@ const App: React.FC = () => {
 
 const Sidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate('/login');
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
 
   const navItems = [
     { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -187,7 +199,14 @@ const Sidebar = () => {
         })}
       </nav>
       <div className="p-4 border-t border-slate-100">
-        <div className="flex items-center gap-3 px-4 py-3 text-sm text-slate-500">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-4 py-3 w-full text-left rounded-xl text-slate-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
+        >
+          <LogOut size={20} />
+          Logout
+        </button>
+        <div className="flex items-center gap-3 px-4 py-3 text-sm text-slate-500 mt-2">
           <Settings size={18} />
           <span>v1.0.0</span>
         </div>
