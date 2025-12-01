@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, setPersistence, browserSessionPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 // TODO: Replace with your actual Firebase project configuration
@@ -16,4 +16,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+// Force login on every visit (session only)
+setPersistence(auth, browserSessionPersistence);
+
 export const db = getFirestore(app);

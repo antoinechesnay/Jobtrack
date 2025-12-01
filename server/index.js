@@ -127,10 +127,10 @@ app.post('/api/search-jobs', async (req, res) => {
         const locationStr = location ? ` in ${location}` : '';
         const response = await client.models.generateContent({
             model: "gemini-2.5-flash",
-            contents: `Find 25-30 specific, active job posting URLs for: "${query}"${locationStr}. 
-      Do not return generic company careers pages or homepages. 
-      Focus on direct application links for open roles. 
-      If the exact role is not found, find the closest active match.`,
+            contents: `Find 50 active job posting URLs for: "${query}"${locationStr}. 
+      List as many direct application links as possible.
+      Include a mix of company career pages and major job boards.
+      Prioritize recent postings.`,
             config: {
                 tools: [{ googleSearch: {} }],
             },
