@@ -93,6 +93,17 @@ const App: React.FC = () => {
     await apiDeleteJob(id);
   };
 
+  // Create a map of URL -> Job ID for efficient lookup in search
+  const jobUrlMap = React.useMemo(() => {
+    const map = new Map<string, string>();
+    jobs.forEach(job => {
+      if (job.url) {
+        map.set(job.url, job.id);
+      }
+    });
+    return map;
+  }, [jobs]);
+
   return (
     <HashRouter>
       <AuthProvider>
@@ -118,9 +129,9 @@ const App: React.FC = () => {
                           element={
                             <JobSearch
                               companies={companies}
-                              companies={companies}
                               onAddJob={addJob}
                               onRemoveJob={removeJob}
+                              existingJobs={jobUrlMap}
                               // Pass persisted state
                               query={searchQuery}
                               setQuery={setSearchQuery}

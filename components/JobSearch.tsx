@@ -9,6 +9,7 @@ interface JobSearchProps {
     companies: Company[];
     onAddJob: (job: Job) => Promise<string | null>;
     onRemoveJob: (id: string) => Promise<void>;
+    existingJobs: Map<string, string>;
     // Lifted state props
     query: string;
     setQuery: React.Dispatch<React.SetStateAction<string>>;
@@ -37,6 +38,8 @@ const LOCATION_DATA: Record<string, string[]> = {
 export const JobSearch: React.FC<JobSearchProps> = ({
     companies,
     onAddJob,
+    onRemoveJob,
+    existingJobs,
     query,
     setQuery,
     location: searchLocation,
@@ -50,7 +53,8 @@ export const JobSearch: React.FC<JobSearchProps> = ({
     cvContext,
     setCvContext
 }) => {
-    const [addedJobs, setAddedJobs] = useState<Map<string, string>>(new Map());
+    const [isSearching, setIsSearching] = useState(false);
+    const [minMatchFilter, setMinMatchFilter] = useState<number>(0);
 
     // Local state for dropdowns
     const [selectedCountry, setSelectedCountry] = useState<string>('');
@@ -120,16 +124,11 @@ export const JobSearch: React.FC<JobSearchProps> = ({
     };
 
     const handleToggleTrack = async (result: SearchResult) => {
-        if (addedJobs.has(result.url)) {
+        if (existingJobs.has(result.url)) {
             // Untrack
-            const jobId = addedJobs.get(result.url);
+            const jobId = existingJobs.get(result.url);
             if (jobId) {
                 await onRemoveJob(jobId);
-                setAddedJobs(prev => {
-                    const next = new Map(prev);
-                    next.delete(result.url);
-                    return next;
-                });
             }
         } else {
             // Track
@@ -143,14 +142,7 @@ export const JobSearch: React.FC<JobSearchProps> = ({
                 location: searchLocation || 'Remote',
                 notes: matchScores[result.url] ? `AI Match Score: ${matchScores[result.url]}%` : undefined
             };
-            const createdId = await onAddJob(newJob);
-            if (createdId) {
-                setAddedJobs(prev => {
-                    const next = new Map(prev);
-                    next.set(result.url, createdId);
-                    return next;
-                });
-            }
+            await onAddJob(newJob);
 
             if (!advice[result.url]) {
                 const tips = await generateJobAdvice(result.title, result.company);
@@ -314,7 +306,7 @@ export const JobSearch: React.FC<JobSearchProps> = ({
                         .sort((a, b) => (matchScores[b.url] || 0) - (matchScores[a.url] || 0)) // Sort by score descending
                         .map((result, index) => {
                             const score = matchScores[result.url];
-                            const isTracked = addedJobs.has(result.url);
+                            const isTracked = existingJobs.has(result.url);
                             return (
                                 <div key={index} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:border-blue-300 transition-colors relative overflow-hidden group">
                                     {/* Match Badge */}
