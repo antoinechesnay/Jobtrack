@@ -1,4 +1,4 @@
-```
+
 import React, { useState, useEffect } from 'react';
 import { Company, Job, JobStatus, SearchResult } from '../types';
 import { searchJobsWithGemini, generateJobAdvice, calculateMatchScore } from '../services/geminiService';
@@ -140,7 +140,7 @@ export const JobSearch: React.FC<JobSearchProps> = ({
                 url: result.url,
                 dateApplied: new Date().toISOString().split('T')[0],
                 location: searchLocation || 'Remote',
-                notes: matchScores[result.url] ? `AI Match Score: ${ matchScores[result.url] }% ` : undefined
+                notes: matchScores[result.url] ? `AI Match Score: ${matchScores[result.url]}% ` : undefined
             };
             await onAddJob(newJob);
 
@@ -232,7 +232,7 @@ export const JobSearch: React.FC<JobSearchProps> = ({
                                 value={selectedCity}
                                 onChange={(e) => {
                                     setSelectedCity(e.target.value);
-                                    setSearchLocation(`${ e.target.value }, ${ selectedCountry } `);
+                                    setSearchLocation(`${e.target.value}, ${selectedCountry} `);
                                 }}
                                 disabled={!selectedCountry}
                                 className="w-full pl-4 pr-8 py-4 bg-white border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-lg appearance-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400"
@@ -312,11 +312,10 @@ export const JobSearch: React.FC<JobSearchProps> = ({
                                     {/* Match Badge */}
                                     {score !== undefined && (
                                         <div className={`absolute top - 0 right - 0 px - 3 py - 1 rounded - bl - xl text - xs font - bold flex items - center gap - 1 shadow - sm
-                            ${
-    score >= 80 ? 'bg-green-500 text-white' :
-    score >= 60 ? 'bg-amber-500 text-white' :
-        score >= 50 ? 'bg-orange-400 text-white' : 'bg-slate-200 text-slate-600'
-} `}>
+                            ${score >= 80 ? 'bg-green-500 text-white' :
+                                                score >= 60 ? 'bg-amber-500 text-white' :
+                                                    score >= 50 ? 'bg-orange-400 text-white' : 'bg-slate-200 text-slate-600'
+                                            } `}>
                                             <TrendingUp size={12} />
                                             {score}% Match
                                         </div>
@@ -378,11 +377,10 @@ export const JobSearch: React.FC<JobSearchProps> = ({
                                         <button
                                             onClick={() => handleToggleTrack(result)}
                                             className={`shrink - 0 flex items - center gap - 2 px - 6 py - 2.5 rounded - lg transition - all text - sm font - medium sm: mt - 0 mt - 2 w - full sm: w - auto justify - center shadow - sm
-                            ${
-    isTracked
-        ? 'bg-green-100 text-green-700 border border-green-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200'
-        : 'bg-slate-900 text-white hover:bg-slate-800 hover:shadow-md'
-} `}
+                            ${isTracked
+                                                    ? 'bg-green-100 text-green-700 border border-green-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200'
+                                                    : 'bg-slate-900 text-white hover:bg-slate-800 hover:shadow-md'
+                                                } `}
                                         >
                                             {isTracked ? (
                                                 <>
