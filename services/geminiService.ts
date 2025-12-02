@@ -3,7 +3,7 @@ import { SearchResult, CVAnalysisResult, InterviewPrepResult, VideoResource, Cov
 
 import { auth } from "../firebase";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://jobtrack-backend-955085072936.europe-west4.run.app/api';
 
 const getAuthHeaders = async () => {
   const token = await auth.currentUser?.getIdToken();
