@@ -124,12 +124,30 @@ export const JobSearch: React.FC<JobSearchProps> = ({
     };
 
     const handleToggleTrack = async (result: SearchResult) => {
-        if (existingJobs.has(result.url)) {
-            // Untrack
-            const jobId = existingJobs.get(result.url);
-            if (jobId) {
-                await onRemoveJob(jobId);
+        // Normalize URL for comparison (remove query params and trailing slash)
+        const normalizeUrl = (url: string) => {
+            try {
+                const u = new URL(url);
+                return u.origin + u.pathname.replace(/\/$/, '');
+            } catch {
+                return url;
             }
+        };
+
+        const resultUrl = normalizeUrl(result.url);
+
+        // Check against normalized existing URLs
+        let existingId: string | undefined;
+        for (const [url, id] of existingJobs.entries()) {
+            if (normalizeUrl(url) === resultUrl) {
+                existingId = id;
+                break;
+            }
+        }
+
+        if (existingId) {
+            // Untrack
+            await onRemoveJob(existingId);
         } else {
             // Track
             const newJob: Job = {
@@ -306,7 +324,24 @@ export const JobSearch: React.FC<JobSearchProps> = ({
                         .sort((a, b) => (matchScores[b.url] || 0) - (matchScores[a.url] || 0)) // Sort by score descending
                         .map((result, index) => {
                             const score = matchScores[result.url];
-                            const isTracked = existingJobs.has(result.url);
+
+                            // Normalize URL for comparison
+                            const normalizeUrl = (url: string) => {
+                                try {
+                                    const u = new URL(url);
+                                    return u.origin + u.pathname.replace(/\/$/, '');
+                                } catch {
+                                    return url;
+                                }
+                            };
+                            const resultUrl = normalizeUrl(result.url);
+                            let isTracked = false;
+                            for (const url of existingJobs.keys()) {
+                                if (normalizeUrl(url) === resultUrl) {
+                                    isTracked = true;
+                                    break;
+                                }
+                            }
                             return (
                                 <div key={index} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:border-blue-300 transition-colors relative overflow-hidden group">
                                     {/* Match Badge */}

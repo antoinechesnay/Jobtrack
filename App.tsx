@@ -61,7 +61,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchJobs = async () => {
+    const fetchJobs = async (retryCount = 0) => {
       if (currentUser) {
         try {
           const userJobs = await getJobs();
@@ -70,7 +70,12 @@ const App: React.FC = () => {
           setError(null);
         } catch (err) {
           console.error("Failed to fetch jobs:", err);
-          setError("Failed to load your jobs. Please check your connection.");
+          if (retryCount < 3) {
+            // Retry with exponential backoff
+            setTimeout(() => fetchJobs(retryCount + 1), 1000 * Math.pow(2, retryCount));
+          } else {
+            setError("Failed to load your jobs. Please check your connection.");
+          }
         }
       } else {
         setJobs([]);
