@@ -263,16 +263,26 @@ export const JobSearch: React.FC<JobSearchProps> = ({
                                     <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                                         <div className="flex-1 min-w-0">
                                             <h4 className="font-bold text-xl text-slate-900 mb-1 leading-tight">{result.title}</h4>
-                                            <div className="flex items-center gap-2 mb-3 text-slate-600 font-medium">
-                                                <Building2 size={16} className="text-blue-600" />
-                                                {result.company}
-                                                {searchLocation && (
-                                                    <span className="text-slate-400 text-xs font-normal flex items-center gap-1 ml-2 border-l border-slate-300 pl-2">
-                                                        <MapPin size={12} /> {searchLocation}
-                                                    </span>
+                                            <div className="flex flex-wrap items-center gap-y-1 gap-x-3 mb-3 text-slate-600 font-medium text-sm">
+                                                <div className="flex items-center gap-1.5">
+                                                    <Building2 size={16} className="text-blue-600" />
+                                                    {result.company}
+                                                </div>
+
+                                                {(result.location || searchLocation) && (
+                                                    <div className="flex items-center gap-1.5 text-slate-500">
+                                                        <MapPin size={16} className="text-slate-400" />
+                                                        {result.location || searchLocation}
+                                                    </div>
+                                                )}
+
+                                                {result.salary && (
+                                                    <div className="flex items-center gap-1.5 text-green-700 bg-green-50 px-2 py-0.5 rounded-md border border-green-100">
+                                                        <span className="font-bold">£</span>
+                                                        {result.salary}
+                                                    </div>
                                                 )}
                                             </div>
-
                                             <a
                                                 href={result.url}
                                                 target="_blank"

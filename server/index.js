@@ -125,34 +125,53 @@ app.post('/api/search-jobs', async (req, res) => {
         const client = getClient();
 
         const locationStr = location ? ` in ${location}` : '';
+        const prompt = `
+        Find 20 active, individual job posting URLs for: "${query}"${locationStr}.
+        
+        CRITICAL INSTRUCTIONS:
+        1.  **Individual Jobs Only**: Do NOT return search result pages (e.g., "30 jobs found"). Return links to specific job descriptions.
+        2.  **Extract Details**: For each job, extract the Title, Company, Location, and Salary (if available).
+        3.  **Salary**: Look for salary ranges (e.g., "£40k - £50k", "$80,000/yr"). If not found, use "Competitive" or "Not specified".
+        4.  **Direct Links**: Prioritize direct company career pages or specific job board listings (LinkedIn, Indeed, Glassdoor individual pages).
+        
+        Return a JSON object with a "jobs" array.
+        `;
+
         const response = await client.models.generateContent({
             model: "gemini-2.5-flash",
-            contents: `Find 50 active job posting URLs for: "${query}"${locationStr}. 
-      List as many direct application links as possible.
-      Include a mix of company career pages and major job boards.
-      Prioritize recent postings.`,
+            contents: prompt,
             config: {
                 tools: [{ googleSearch: {} }],
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        jobs: {
+                            type: Type.ARRAY,
+                            items: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    title: { type: Type.STRING },
+                                    company: { type: Type.STRING },
+                                    location: { type: Type.STRING },
+                                    salary: { type: Type.STRING },
+                                    url: { type: Type.STRING },
+                                    snippet: { type: Type.STRING, description: "Brief summary of the role (1-2 sentences)" }
+                                },
+                                required: ["title", "company", "url", "snippet"]
+                            }
+                        }
+                    }
+                }
             },
         });
 
-        const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-        const results = [];
-
-        if (groundingChunks) {
-            groundingChunks.forEach((chunk) => {
-                if (chunk.web) {
-                    results.push({
-                        title: chunk.web.title || "Job Opening",
-                        company: "External Source",
-                        url: chunk.web.uri,
-                        snippet: "Click to view specific job details on the source website."
-                    });
-                }
-            });
+        if (response.text) {
+            const data = JSON.parse(response.text);
+            res.json(data.jobs || []);
+        } else {
+            throw new Error("No response from AI");
         }
-
-        res.json(results);
     } catch (error) {
         handleError(res, error, "Search");
     }

@@ -34,6 +34,9 @@ export interface SearchResult {
   company: string;
   url: string;
   snippet: string;
+  location?: string;
+  salary?: string;
+  postedAt?: string;
   matchScore?: number; // 0-100
 }
 
