@@ -48,6 +48,7 @@ export interface CVAnalysisResult {
   weaknesses: string[];
   mentorVerdict: string;
   searchQuery: string;
+  experienceLevel: string;
 }
 
 export interface InterviewPrepResult {

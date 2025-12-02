@@ -142,16 +142,24 @@ app.post('/api/search-jobs', async (req, res) => {
         const client = getClient();
 
         const locationStr = location ? ` in ${location}` : '';
+        const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        const oneMonthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
         const prompt = `
-        Find at least 15-20 active job posting URLs for: "${query}"${locationStr}.
+        Context: Today is ${today}.
+        Task: Act as a world-class Job Market Analyst. Your primary goal is to find relevant 20 job listings based on the  ${query}${locationStr} , using the Google Search tool exclusively for grounding.
         
-        CRITICAL INSTRUCTIONS:
-        1.  **Freshness**: ONLY return jobs posted within the last 30 days.
-        2.  **Quantity is Key**: You MUST return at least 15 distinct job listings. Do not stop at 1 or 2.
-        3.  **Search Broadly**: Look at major job boards (LinkedIn, Indeed, Glassdoor, Reed, TotalJobs) AND company career pages.
-        4.  **Extract Details**: For each job, extract the Title, Company, Location, Salary, and Posted Date.
+        
+        SEARCH STRATEGY:
+        1.  **Sources**: Prioritize major boards (LinkedIn, Indeed, Glassdoor, Reed, TotalJobs) and direct Company Career Pages (specifically look for "greenhouse.io", "lever.co", "workday", "ashby").
+        2.  **Avoid**: Spammy aggregators, "courses" disguised as jobs, and expired listings.
+        
+        STRICT QUALITY CONTROL:
+        1.  **Direct Links**: URLs must be specific job postings (e.g. /jobs/123, /view/...), NOT homepages.
+        2.  **Freshness**: Only return jobs posted after ${oneMonthAgo}.
+        3.  **No Hallucinations**: If you can't find 10 real ones, return fewer. Do not make them up.
+        4.  **Fallback**: If exact matches are low, broaden the search terms slightly but keep the location.
         5.  **Salary**: Look for salary ranges. If not found, use "Competitive".
-        6.  **Direct Links**: Prioritize direct links to the job description.
         
         Output the result as a raw JSON object with a "jobs" array. Do not include markdown formatting.
         Example format:
@@ -197,7 +205,8 @@ app.post('/api/match-score', async (req, res) => {
         Candidate Skills: ${userSkills.join(', ')}.
         Job: ${jobTitle} - ${jobSnippet}.
         
-        Task: Estimate the probability (0-100) that this candidate is a good match for this job based ONLY on the skills provided.
+        Task: Estimate the probability (0-100) that this candidate is a good match for this job based on skills AND implied experience level.
+        If the job requires significantly more experience than implied by the candidate's profile (e.g. Senior role vs Junior skills), penalize the score.
         Return ONLY the number.
         `;
 
@@ -277,7 +286,8 @@ app.post('/api/analyze-cv', async (req, res) => {
             4. Top 3 Strengths.
             5. Top 3 Weaknesses or Gaps to address.
             6. A "Mentor Verdict" (1-2 sentences on overall hirability).
-            7. A specific "searchQuery" string optimized for finding jobs for this candidate (e.g. "Senior React Developer remote London").
+            7. A specific "searchQuery" string optimized for finding jobs for this candidate (e.g. "Senior React Developer London"). Do NOT use boolean operators like OR, AND, or parentheses. Use a simple, broad keyword string.
+            8. The candidate's "experienceLevel" (e.g. "Junior", "Mid-level", "Senior", "Lead", "5+ years").
             `,
             config: {
                 responseMimeType: "application/json",
@@ -290,9 +300,10 @@ app.post('/api/analyze-cv', async (req, res) => {
                         strengths: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Key strong points" },
                         weaknesses: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Areas for improvement" },
                         mentorVerdict: { type: Type.STRING, description: "Overall professional assessment" },
-                        searchQuery: { type: Type.STRING, description: "Optimized search query string" }
+                        searchQuery: { type: Type.STRING, description: "Optimized search query string" },
+                        experienceLevel: { type: Type.STRING, description: "Candidate's experience level" }
                     },
-                    required: ["summary", "skills", "suggestedRoles", "strengths", "weaknesses", "mentorVerdict", "searchQuery"]
+                    required: ["summary", "skills", "suggestedRoles", "strengths", "weaknesses", "mentorVerdict", "searchQuery", "experienceLevel"]
                 }
             }
         });
