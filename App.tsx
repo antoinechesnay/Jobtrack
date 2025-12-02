@@ -62,6 +62,7 @@ const App: React.FC = () => {
     const fetchJobs = async () => {
       if (currentUser) {
         const userJobs = await getJobs();
+        console.log("Fetched jobs:", userJobs.length, userJobs);
         setJobs(userJobs);
       } else {
         setJobs([]);
