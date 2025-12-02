@@ -23,6 +23,16 @@ interface JobSearchProps {
     setCvContext: React.Dispatch<React.SetStateAction<{ searchQuery: string, skills: string[] } | null>>;
 }
 
+const LOCATION_DATA: Record<string, string[]> = {
+    "United Kingdom": ["London", "Manchester", "Birmingham", "Edinburgh", "Glasgow", "Bristol", "Leeds", "Cambridge", "Oxford", "Remote"],
+    "United States": ["New York, NY", "San Francisco, CA", "Austin, TX", "Seattle, WA", "Boston, MA", "Chicago, IL", "Los Angeles, CA", "Remote"],
+    "Germany": ["Berlin", "Munich", "Hamburg", "Frankfurt", "Cologne", "Remote"],
+    "France": ["Paris", "Lyon", "Marseille", "Toulouse", "Bordeaux", "Remote"],
+    "Canada": ["Toronto", "Vancouver", "Montreal", "Ottawa", "Calgary", "Remote"],
+    "Netherlands": ["Amsterdam", "Rotterdam", "Utrecht", "Eindhoven", "Remote"],
+    "Remote": ["Worldwide"]
+};
+
 export const JobSearch: React.FC<JobSearchProps> = ({
     companies,
     onAddJob,
@@ -42,6 +52,11 @@ export const JobSearch: React.FC<JobSearchProps> = ({
     const [isSearching, setIsSearching] = useState(false);
     const [minMatchFilter, setMinMatchFilter] = useState<number>(0);
     const [addedJobs, setAddedJobs] = useState<Set<string>>(new Set());
+
+    // Local state for dropdowns
+    const [selectedCountry, setSelectedCountry] = useState<string>('');
+    const [selectedCity, setSelectedCity] = useState<string>('');
+
     const routerLocation = useLocation();
 
     useEffect(() => {
@@ -174,19 +189,52 @@ export const JobSearch: React.FC<JobSearchProps> = ({
                         )}
                     </div>
 
-                    {/* Location Input */}
-                    <div className="relative md:w-1/3">
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                            <MapPin size={20} />
+                    {/* Location Selection */}
+                    <div className="flex flex-col sm:flex-row gap-2 md:w-2/5">
+                        {/* Country Dropdown */}
+                        <div className="relative w-full">
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                                <MapPin size={20} />
+                            </div>
+                            <select
+                                value={selectedCountry}
+                                onChange={(e) => {
+                                    setSelectedCountry(e.target.value);
+                                    setSelectedCity(''); // Reset city when country changes
+                                    setSearchLocation(e.target.value); // Default to country if no city selected
+                                }}
+                                className="w-full pl-11 pr-8 py-4 bg-white border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-lg appearance-none cursor-pointer"
+                            >
+                                <option value="" disabled>Select Country</option>
+                                {Object.keys(LOCATION_DATA).map(country => (
+                                    <option key={country} value={country}>{country}</option>
+                                ))}
+                            </select>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
                         </div>
-                        <input
-                            type="text"
-                            value={searchLocation}
-                            onChange={(e) => setSearchLocation(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                            placeholder="City, State, or 'Remote'"
-                            className="w-full pl-11 pr-4 py-4 bg-white border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-lg"
-                        />
+
+                        {/* City Dropdown */}
+                        <div className="relative w-full">
+                            <select
+                                value={selectedCity}
+                                onChange={(e) => {
+                                    setSelectedCity(e.target.value);
+                                    setSearchLocation(`${e.target.value}, ${selectedCountry}`);
+                                }}
+                                disabled={!selectedCountry}
+                                className="w-full pl-4 pr-8 py-4 bg-white border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-lg appearance-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400"
+                            >
+                                <option value="" disabled>Select City</option>
+                                {selectedCountry && LOCATION_DATA[selectedCountry]?.map(city => (
+                                    <option key={city} value={city}>{city}</option>
+                                ))}
+                            </select>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Search Button */}

@@ -126,15 +126,22 @@ app.post('/api/search-jobs', async (req, res) => {
 
         const locationStr = location ? ` in ${location}` : '';
         const prompt = `
-        Find 20 active, individual job posting URLs for: "${query}"${locationStr}.
+        Find at least 15-20 active job posting URLs for: "${query}"${locationStr}.
         
         CRITICAL INSTRUCTIONS:
-        1.  **Individual Jobs Only**: Do NOT return search result pages (e.g., "30 jobs found"). Return links to specific job descriptions.
-        2.  **Extract Details**: For each job, extract the Title, Company, Location, and Salary (if available).
-        3.  **Salary**: Look for salary ranges (e.g., "£40k - £50k", "$80,000/yr"). If not found, use "Competitive" or "Not specified".
-        4.  **Direct Links**: Prioritize direct company career pages or specific job board listings (LinkedIn, Indeed, Glassdoor individual pages).
+        1.  **Quantity is Key**: You MUST return at least 15 distinct job listings. Do not stop at 1 or 2.
+        2.  **Search Broadly**: Look at major job boards (LinkedIn, Indeed, Glassdoor, Reed, TotalJobs) AND company career pages.
+        3.  **Extract Details**: For each job, extract the Title, Company, Location, and Salary.
+        4.  **Salary**: Look for salary ranges. If not found, use "Competitive".
+        5.  **Direct Links**: Prioritize direct links to the job description.
         
-        Return a JSON object with a "jobs" array.
+        Output the result as a raw JSON object with a "jobs" array. Do not include markdown formatting.
+        Example format:
+        {
+          "jobs": [
+            { "title": "...", "company": "...", "location": "...", "salary": "...", "url": "...", "snippet": "..." }
+          ]
+        }
         `;
 
         const response = await client.models.generateContent({
@@ -142,32 +149,15 @@ app.post('/api/search-jobs', async (req, res) => {
             contents: prompt,
             config: {
                 tools: [{ googleSearch: {} }],
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        jobs: {
-                            type: Type.ARRAY,
-                            items: {
-                                type: Type.OBJECT,
-                                properties: {
-                                    title: { type: Type.STRING },
-                                    company: { type: Type.STRING },
-                                    location: { type: Type.STRING },
-                                    salary: { type: Type.STRING },
-                                    url: { type: Type.STRING },
-                                    snippet: { type: Type.STRING, description: "Brief summary of the role (1-2 sentences)" }
-                                },
-                                required: ["title", "company", "url", "snippet"]
-                            }
-                        }
-                    }
-                }
             },
         });
 
         if (response.text) {
-            const data = JSON.parse(response.text);
+            let jsonString = response.text;
+            // Clean up markdown code blocks if present
+            jsonString = jsonString.replace(/```json/g, '').replace(/```/g, '').trim();
+
+            const data = JSON.parse(jsonString);
             res.json(data.jobs || []);
         } else {
             throw new Error("No response from AI");
