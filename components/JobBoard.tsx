@@ -5,11 +5,11 @@ import { MoreHorizontal, MapPin, Calendar, Trash2, ExternalLink } from 'lucide-r
 
 interface JobBoardProps {
   jobs: Job[];
-  onUpdateStatus: (id: string, status: JobStatus) => void;
+  onUpdateJob: (id: string, updates: Partial<Job>) => void;
   onDelete: (id: string) => void;
 }
 
-export const JobBoard: React.FC<JobBoardProps> = ({ jobs, onUpdateStatus, onDelete }) => {
+export const JobBoard: React.FC<JobBoardProps> = ({ jobs, onUpdateJob, onDelete }) => {
   const columns = Object.values(JobStatus);
 
   return (
@@ -23,13 +23,13 @@ export const JobBoard: React.FC<JobBoardProps> = ({ jobs, onUpdateStatus, onDele
                 {jobs.filter(j => j.status === status).length}
               </span>
             </div>
-            
+
             <div className="space-y-3">
               {jobs.filter(j => j.status === status).map(job => (
-                <JobCard 
-                  key={job.id} 
-                  job={job} 
-                  onUpdateStatus={onUpdateStatus}
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  onUpdateJob={onUpdateJob}
                   onDelete={onDelete}
                 />
               ))}
@@ -46,11 +46,19 @@ export const JobBoard: React.FC<JobBoardProps> = ({ jobs, onUpdateStatus, onDele
   );
 };
 
-const JobCard: React.FC<{ 
-  job: Job; 
-  onUpdateStatus: (id: string, status: JobStatus) => void;
+const JobCard: React.FC<{
+  job: Job;
+  onUpdateJob: (id: string, updates: Partial<Job>) => void;
   onDelete: (id: string) => void;
-}> = ({ job, onUpdateStatus, onDelete }) => {
+}> = ({ job, onUpdateJob, onDelete }) => {
+  const [notes, setNotes] = React.useState(job.notes || '');
+
+  const handleNotesBlur = () => {
+    if (notes !== job.notes) {
+      onUpdateJob(job.id, { notes });
+    }
+  };
+
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow group relative">
       <div className="flex justify-between items-start mb-2">
@@ -59,12 +67,12 @@ const JobCard: React.FC<{
           <p className="text-sm text-blue-600 font-medium">{job.companyName}</p>
         </div>
         <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-           <button 
-             onClick={() => onDelete(job.id)}
-             className="text-slate-400 hover:text-red-500 p-1"
-           >
-             <Trash2 size={14} />
-           </button>
+          <button
+            onClick={() => onDelete(job.id)}
+            className="text-slate-400 hover:text-red-500 p-1"
+          >
+            <Trash2 size={14} />
+          </button>
         </div>
       </div>
 
@@ -83,16 +91,28 @@ const JobCard: React.FC<{
         )}
       </div>
 
-      <div className="mt-4 pt-3 border-t border-slate-50 flex justify-between items-center">
+      {/* Notes Section */}
+      <div className="mt-3">
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          onBlur={handleNotesBlur}
+          placeholder="Add notes..."
+          className="w-full text-xs bg-slate-50 border border-slate-100 rounded p-2 text-slate-600 focus:outline-none focus:border-blue-300 focus:bg-white transition-colors resize-none"
+          rows={2}
+        />
+      </div>
+
+      <div className="mt-3 pt-3 border-t border-slate-50 flex justify-between items-center">
         {job.url && (
-            <a href={job.url} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-xs flex items-center gap-1">
-                View <ExternalLink size={10} />
-            </a>
+          <a href={job.url} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-xs flex items-center gap-1">
+            View <ExternalLink size={10} />
+          </a>
         )}
-        
-        <select 
+
+        <select
           value={job.status}
-          onChange={(e) => onUpdateStatus(job.id, e.target.value as JobStatus)}
+          onChange={(e) => onUpdateJob(job.id, { status: e.target.value as JobStatus })}
           className="text-xs border border-slate-200 rounded px-2 py-1 bg-slate-50 text-slate-600 focus:outline-none focus:border-blue-300 ml-auto"
         >
           {Object.values(JobStatus).map(s => (
@@ -105,13 +125,13 @@ const JobCard: React.FC<{
 };
 
 const getStatusBorderColor = (status: JobStatus) => {
-    switch (status) {
-        case JobStatus.TO_BE_APPLIED: return 'border-slate-300';
-        case JobStatus.APPLIED: return 'border-blue-300';
-        case JobStatus.RESULT: return 'border-purple-300';
-        case JobStatus.NEXT_ROUND: return 'border-amber-300';
-        case JobStatus.OFFER: return 'border-green-300';
-        case JobStatus.DECLINED: return 'border-red-300';
-        default: return 'border-slate-200';
-    }
+  switch (status) {
+    case JobStatus.TO_BE_APPLIED: return 'border-slate-300';
+    case JobStatus.APPLIED: return 'border-blue-300';
+    case JobStatus.RESULT: return 'border-purple-300';
+    case JobStatus.NEXT_ROUND: return 'border-amber-300';
+    case JobStatus.OFFER: return 'border-green-300';
+    case JobStatus.DECLINED: return 'border-red-300';
+    default: return 'border-slate-200';
+  }
 }

@@ -81,10 +81,10 @@ const App: React.FC = () => {
     return null;
   };
 
-  const updateJobStatus = async (id: string, status: JobStatus) => {
+  const updateJob = async (id: string, updates: Partial<Job>) => {
     // Optimistic update
-    setJobs(prev => prev.map(job => job.id === id ? { ...job, status } : job));
-    await apiUpdateJob(id, { status });
+    setJobs(prev => prev.map(job => job.id === id ? { ...job, ...updates } : job));
+    await apiUpdateJob(id, updates);
   };
 
   const removeJob = async (id: string) => {
@@ -123,7 +123,7 @@ const App: React.FC = () => {
                         <Route path="/" element={<Navigate to="/dashboard" replace />} />
                         <Route path="/dashboard" element={<Dashboard jobs={jobs} companies={companies} />} />
                         <Route path="/companies" element={<CompanyList companies={companies} onFindJobs={(company) => console.log(company)} />} />
-                        <Route path="/board" element={<JobBoard jobs={jobs} onUpdateStatus={updateJobStatus} onDelete={removeJob} />} />
+                        <Route path="/board" element={<JobBoard jobs={jobs} onUpdateJob={updateJob} onDelete={removeJob} />} />
                         <Route
                           path="/search"
                           element={
