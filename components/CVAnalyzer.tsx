@@ -69,21 +69,37 @@ export const CVAnalyzer: React.FC = () => {
 
                     try {
                       setIsAnalyzing(true);
+
+                      // Get auth token
+                      const { auth } = await import('../firebase');
+                      const token = await auth.currentUser?.getIdToken();
+
+                      if (!token) {
+                        alert("You must be logged in to upload files.");
+                        return;
+                      }
+
                       // Use the same base URL logic as jobService
                       const API_URL = import.meta.env.VITE_API_URL || 'https://jobtrack-backend-955085072936.europe-west4.run.app/api';
+
                       const response = await fetch(`${API_URL}/parse-cv`, {
                         method: 'POST',
+                        headers: {
+                          'Authorization': `Bearer ${token}`
+                        },
                         body: formData,
-                        // No headers needed, browser sets Content-Type for FormData
                       });
 
-                      if (!response.ok) throw new Error('Failed to parse file');
+                      if (!response.ok) {
+                        const errData = await response.json().catch(() => ({}));
+                        throw new Error(errData.error || 'Failed to parse file');
+                      }
 
                       const data = await response.json();
                       setCvText(data.text);
-                    } catch (error) {
+                    } catch (error: any) {
                       console.error("Error uploading file:", error);
-                      alert("Failed to read file. Please paste text manually.");
+                      alert(`Error: ${error.message || "Failed to read file"}`);
                     } finally {
                       setIsAnalyzing(false);
                     }

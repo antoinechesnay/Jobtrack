@@ -7,7 +7,9 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { verifyToken } from './middleware/auth.js';
 import { db } from './firebaseAdmin.js';
 import multer from 'multer';
-import pdf from 'pdf-parse/lib/pdf-parse.js';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const pdf = require('pdf-parse');
 import mammoth from 'mammoth';
 
 dotenv.config();
