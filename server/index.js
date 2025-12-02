@@ -6,6 +6,9 @@ import rateLimit from 'express-rate-limit';
 import { GoogleGenAI, Type } from "@google/genai";
 import { verifyToken } from './middleware/auth.js';
 import { db } from './firebaseAdmin.js';
+import multer from 'multer';
+import pdf from 'pdf-parse/lib/pdf-parse.js';
+import mammoth from 'mammoth';
 
 dotenv.config();
 
@@ -215,6 +218,33 @@ app.post('/api/job-advice', async (req, res) => {
         res.json({ advice: response.text || "No advice generated." });
     } catch (error) {
         handleError(res, error, "Advice");
+    }
+});
+
+const upload = multer({ storage: multer.memoryStorage() });
+
+app.post('/api/parse-cv', upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+        let text = "";
+        const mimeType = req.file.mimetype;
+
+        if (mimeType === 'application/pdf') {
+            const data = await pdf(req.file.buffer);
+            text = data.text;
+        } else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+            const result = await mammoth.extractRawText({ buffer: req.file.buffer });
+            text = result.value;
+        } else if (mimeType === 'text/plain' || mimeType === 'text/markdown') {
+            text = req.file.buffer.toString('utf-8');
+        } else {
+            return res.status(400).json({ error: "Unsupported file type. Please upload PDF, DOCX, or TXT." });
+        }
+
+        res.json({ text: text.trim() });
+    } catch (error) {
+        handleError(res, error, "File Parse");
     }
 });
 

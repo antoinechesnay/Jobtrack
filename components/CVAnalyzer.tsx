@@ -21,14 +21,14 @@ export const CVAnalyzer: React.FC = () => {
 
   const handleFindJobs = () => {
     if (result) {
-        navigate('/search', { 
-            state: { 
-                cvContext: {
-                    searchQuery: result.searchQuery,
-                    skills: result.skills
-                }
-            } 
-        });
+      navigate('/search', {
+        state: {
+          cvContext: {
+            searchQuery: result.searchQuery,
+            skills: result.skills
+          }
+        }
+      });
     }
   };
 
@@ -52,11 +52,56 @@ export const CVAnalyzer: React.FC = () => {
         {/* Input Section */}
         <div className="space-y-4">
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm h-full flex flex-col">
-            <label className="block text-sm font-medium text-slate-700 mb-2">Resume / CV Content</label>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-medium text-slate-700">Resume / CV Content</label>
+              <div className="relative">
+                <input
+                  type="file"
+                  id="cv-upload"
+                  className="hidden"
+                  accept=".pdf,.docx,.txt,.md"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    try {
+                      setIsAnalyzing(true);
+                      // Use the same base URL logic as jobService
+                      const API_URL = import.meta.env.VITE_API_URL || 'https://jobtrack-backend-955085072936.europe-west4.run.app/api';
+                      const response = await fetch(`${API_URL}/parse-cv`, {
+                        method: 'POST',
+                        body: formData,
+                        // No headers needed, browser sets Content-Type for FormData
+                      });
+
+                      if (!response.ok) throw new Error('Failed to parse file');
+
+                      const data = await response.json();
+                      setCvText(data.text);
+                    } catch (error) {
+                      console.error("Error uploading file:", error);
+                      alert("Failed to read file. Please paste text manually.");
+                    } finally {
+                      setIsAnalyzing(false);
+                    }
+                  }}
+                />
+                <label
+                  htmlFor="cv-upload"
+                  className="text-xs text-blue-600 font-medium hover:text-blue-800 cursor-pointer flex items-center gap-1 bg-blue-50 px-2 py-1 rounded"
+                >
+                  <Sparkles size={12} />
+                  Upload File (PDF/Docx)
+                </label>
+              </div>
+            </div>
             <textarea
               value={cvText}
               onChange={(e) => setCvText(e.target.value)}
-              placeholder="Paste your full resume text here for detailed analysis..."
+              placeholder="Paste your full resume text here or upload a file..."
               className="w-full flex-grow min-h-[400px] p-4 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50 text-sm leading-relaxed resize-none font-mono"
             />
             <div className="mt-4 flex justify-end">
@@ -92,11 +137,11 @@ export const CVAnalyzer: React.FC = () => {
           )}
 
           {isAnalyzing && (
-             <div className="h-full flex flex-col items-center justify-center text-blue-600 rounded-xl bg-white p-12 min-h-[400px]">
-                <Loader2 size={48} className="animate-spin mb-4" />
-                <p className="font-medium text-lg">AI Mentor is reading your CV...</p>
-                <p className="text-slate-400 text-sm mt-2">Analyzing skills, gaps, and market fit.</p>
-             </div>
+            <div className="h-full flex flex-col items-center justify-center text-blue-600 rounded-xl bg-white p-12 min-h-[400px]">
+              <Loader2 size={48} className="animate-spin mb-4" />
+              <p className="font-medium text-lg">AI Mentor is reading your CV...</p>
+              <p className="text-slate-400 text-sm mt-2">Analyzing skills, gaps, and market fit.</p>
+            </div>
           )}
 
           {result && (
@@ -104,49 +149,49 @@ export const CVAnalyzer: React.FC = () => {
               {/* Verdict Card */}
               <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-6 rounded-xl shadow-lg text-white">
                 <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-lg font-bold flex items-center gap-2">
-                        <Sparkles className="text-amber-400" size={20} />
-                        Mentor Verdict
-                    </h3>
-                    <button 
-                        onClick={handleFindJobs}
-                        className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 border border-white/10"
-                    >
-                        <Search size={16} />
-                        Find High Match Jobs
-                    </button>
+                  <h3 className="text-lg font-bold flex items-center gap-2">
+                    <Sparkles className="text-amber-400" size={20} />
+                    Mentor Verdict
+                  </h3>
+                  <button
+                    onClick={handleFindJobs}
+                    className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 border border-white/10"
+                  >
+                    <Search size={16} />
+                    Find High Match Jobs
+                  </button>
                 </div>
                 <p className="text-slate-200 italic leading-relaxed text-sm">"{result.mentorVerdict}"</p>
               </div>
 
               {/* Strengths & Weaknesses */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-white p-5 rounded-xl border border-green-100 shadow-sm">
-                      <h4 className="font-bold text-green-700 mb-3 flex items-center gap-2">
-                          <TrendingUp size={18} /> Strengths
-                      </h4>
-                      <ul className="space-y-2">
-                          {result.strengths?.map((s, i) => (
-                              <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
-                                  <CheckCircle size={14} className="text-green-500 mt-0.5 shrink-0" />
-                                  {s}
-                              </li>
-                          ))}
-                      </ul>
-                  </div>
-                  <div className="bg-white p-5 rounded-xl border border-red-100 shadow-sm">
-                      <h4 className="font-bold text-red-700 mb-3 flex items-center gap-2">
-                          <AlertCircle size={18} /> Development Areas
-                      </h4>
-                      <ul className="space-y-2">
-                          {result.weaknesses?.map((w, i) => (
-                              <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
-                                  <span className="w-1.5 h-1.5 bg-red-400 rounded-full mt-1.5 shrink-0"></span>
-                                  {w}
-                              </li>
-                          ))}
-                      </ul>
-                  </div>
+                <div className="bg-white p-5 rounded-xl border border-green-100 shadow-sm">
+                  <h4 className="font-bold text-green-700 mb-3 flex items-center gap-2">
+                    <TrendingUp size={18} /> Strengths
+                  </h4>
+                  <ul className="space-y-2">
+                    {result.strengths?.map((s, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                        <CheckCircle size={14} className="text-green-500 mt-0.5 shrink-0" />
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="bg-white p-5 rounded-xl border border-red-100 shadow-sm">
+                  <h4 className="font-bold text-red-700 mb-3 flex items-center gap-2">
+                    <AlertCircle size={18} /> Development Areas
+                  </h4>
+                  <ul className="space-y-2">
+                    {result.weaknesses?.map((w, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                        <span className="w-1.5 h-1.5 bg-red-400 rounded-full mt-1.5 shrink-0"></span>
+                        {w}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
 
               {/* Suggested Roles */}
@@ -159,7 +204,7 @@ export const CVAnalyzer: React.FC = () => {
                   {result.suggestedRoles.map((role, idx) => (
                     <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-lg group hover:bg-blue-50 hover:border-blue-100 transition-colors">
                       <span className="font-medium text-slate-700">{role}</span>
-                      <button 
+                      <button
                         onClick={() => handleSearchRole(role)}
                         className="flex items-center gap-1 text-xs text-blue-600 font-semibold hover:text-blue-700 bg-white px-3 py-1.5 rounded-md border border-slate-200 shadow-sm"
                       >
