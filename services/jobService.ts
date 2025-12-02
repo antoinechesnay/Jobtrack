@@ -4,7 +4,19 @@ import { auth } from '../firebase';
 const API_URL = import.meta.env.VITE_API_URL || 'https://jobtrack-backend-955085072936.europe-west4.run.app/api';
 
 const getAuthHeaders = async () => {
-    const token = await auth.currentUser?.getIdToken();
+    // Wait for auth to initialize if needed (simple check)
+    let token = await auth.currentUser?.getIdToken();
+
+    if (!token) {
+        // Retry once after short delay if auth might be initializing
+        await new Promise(resolve => setTimeout(resolve, 500));
+        token = await auth.currentUser?.getIdToken();
+    }
+
+    if (!token) {
+        console.warn("No auth token available for request");
+    }
+
     return {
         'Content-Type': 'application/json',
         'Authorization': token ? `Bearer ${token}` : ''
