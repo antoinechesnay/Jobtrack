@@ -84,10 +84,13 @@ app.get('/health', (req, res) => {
 
 app.get('/api/jobs', async (req, res) => {
     try {
+        console.log(`[GET /api/jobs] Request from UID: ${req.user.uid}`);
         const jobsSnapshot = await db.collection('users').doc(req.user.uid).collection('jobs').get();
+        console.log(`[GET /api/jobs] Found ${jobsSnapshot.size} jobs for UID: ${req.user.uid}`);
         const jobs = jobsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         res.json(jobs);
     } catch (error) {
+        console.error(`[GET /api/jobs] Error for UID: ${req.user?.uid}`, error);
         handleError(res, error, "Get Jobs");
     }
 });
@@ -95,10 +98,13 @@ app.get('/api/jobs', async (req, res) => {
 app.post('/api/jobs', async (req, res) => {
     try {
         const job = req.body;
+        console.log(`[POST /api/jobs] Adding job for UID: ${req.user.uid}`, job.position);
         // Ensure we don't overwrite the ID if passed, or let Firestore generate one
         const docRef = await db.collection('users').doc(req.user.uid).collection('jobs').add(job);
+        console.log(`[POST /api/jobs] Job added with ID: ${docRef.id}`);
         res.json({ id: docRef.id, ...job });
     } catch (error) {
+        console.error(`[POST /api/jobs] Error for UID: ${req.user?.uid}`, error);
         handleError(res, error, "Add Job");
     }
 });
