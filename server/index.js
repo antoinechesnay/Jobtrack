@@ -129,17 +129,18 @@ app.post('/api/search-jobs', async (req, res) => {
         Find at least 15-20 active job posting URLs for: "${query}"${locationStr}.
         
         CRITICAL INSTRUCTIONS:
-        1.  **Quantity is Key**: You MUST return at least 15 distinct job listings. Do not stop at 1 or 2.
-        2.  **Search Broadly**: Look at major job boards (LinkedIn, Indeed, Glassdoor, Reed, TotalJobs) AND company career pages.
-        3.  **Extract Details**: For each job, extract the Title, Company, Location, and Salary.
-        4.  **Salary**: Look for salary ranges. If not found, use "Competitive".
-        5.  **Direct Links**: Prioritize direct links to the job description.
+        1.  **Freshness**: ONLY return jobs posted within the last 30 days.
+        2.  **Quantity is Key**: You MUST return at least 15 distinct job listings. Do not stop at 1 or 2.
+        3.  **Search Broadly**: Look at major job boards (LinkedIn, Indeed, Glassdoor, Reed, TotalJobs) AND company career pages.
+        4.  **Extract Details**: For each job, extract the Title, Company, Location, Salary, and Posted Date.
+        5.  **Salary**: Look for salary ranges. If not found, use "Competitive".
+        6.  **Direct Links**: Prioritize direct links to the job description.
         
         Output the result as a raw JSON object with a "jobs" array. Do not include markdown formatting.
         Example format:
         {
           "jobs": [
-            { "title": "...", "company": "...", "location": "...", "salary": "...", "url": "...", "snippet": "..." }
+            { "title": "...", "company": "...", "location": "...", "salary": "...", "postedAt": "2 days ago", "url": "...", "snippet": "..." }
           ]
         }
         `;
