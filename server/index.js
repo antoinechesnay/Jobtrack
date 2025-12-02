@@ -13,6 +13,11 @@ const app = express();
 
 // 1. Strict CORS
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [];
+// Add Vercel app to allowed origins if not present
+if (!ALLOWED_ORIGINS.includes('https://jobtrack-chi.vercel.app')) {
+    ALLOWED_ORIGINS.push('https://jobtrack-chi.vercel.app');
+}
+
 app.use(cors({
     origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps or curl requests)
@@ -20,6 +25,7 @@ app.use(cors({
         if (ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
+            console.warn(`Blocked by CORS: ${origin}`);
             callback(new Error('Not allowed by CORS'));
         }
     }

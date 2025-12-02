@@ -58,12 +58,20 @@ const App: React.FC = () => {
     setCompanies(parsedCompanies);
   }, []);
 
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     const fetchJobs = async () => {
       if (currentUser) {
-        const userJobs = await getJobs();
-        console.log("Fetched jobs:", userJobs.length, userJobs);
-        setJobs(userJobs);
+        try {
+          const userJobs = await getJobs();
+          console.log("Fetched jobs:", userJobs.length, userJobs);
+          setJobs(userJobs);
+          setError(null);
+        } catch (err) {
+          console.error("Failed to fetch jobs:", err);
+          setError("Failed to load your jobs. Please check your connection.");
+        }
       } else {
         setJobs([]);
       }
@@ -72,14 +80,19 @@ const App: React.FC = () => {
   }, [currentUser]);
 
   const addJob = async (job: Job): Promise<string | null> => {
-    // Optimistic update or wait for server? Let's wait for server to get ID
-    const { id, ...jobData } = job; // Remove ID if it's temporary
-    const newJob = await apiAddJob(jobData);
-    if (newJob) {
-      setJobs(prev => [...prev, newJob]);
-      return newJob.id;
+    try {
+      const { id, ...jobData } = job; // Remove ID if it's temporary
+      const newJob = await apiAddJob(jobData);
+      if (newJob) {
+        setJobs(prev => [...prev, newJob]);
+        return newJob.id;
+      }
+      return null;
+    } catch (err) {
+      console.error("Failed to add job:", err);
+      setError("Failed to save job. Please try again.");
+      return null;
     }
-    return null;
   };
 
   const updateJob = async (id: string, updates: Partial<Job>) => {
@@ -120,6 +133,20 @@ const App: React.FC = () => {
                   <Sidebar currentUser={currentUser} />
                   <main className="flex-1 overflow-y-auto">
                     <div className="max-w-7xl mx-auto p-4 md:p-8">
+                      {error && (
+                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold">Error:</span>
+                            <span>{error}</span>
+                          </div>
+                          <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700">
+                            <span className="sr-only">Dismiss</span>
+                            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
                       <Routes>
                         <Route path="/" element={<Navigate to="/dashboard" replace />} />
                         <Route path="/dashboard" element={<Dashboard jobs={jobs} companies={companies} />} />

@@ -19,7 +19,7 @@ export const getJobs = async (): Promise<Job[]> => {
         return await response.json();
     } catch (error) {
         console.error("Error fetching jobs:", error);
-        return [];
+        throw error;
     }
 };
 
@@ -35,7 +35,7 @@ export const addJob = async (job: Omit<Job, 'id'>): Promise<Job | null> => {
         return await response.json();
     } catch (error) {
         console.error("Error adding job:", error);
-        return null;
+        throw error;
     }
 };
 
