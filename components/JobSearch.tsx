@@ -7,7 +7,8 @@ import { useLocation } from 'react-router-dom';
 
 interface JobSearchProps {
     companies: Company[];
-    onAddJob: (job: Job) => Promise<void>;
+    onAddJob: (job: Job) => Promise<string | null>;
+    onRemoveJob: (id: string) => Promise<void>;
     // Lifted state props
     query: string;
     setQuery: React.Dispatch<React.SetStateAction<string>>;
@@ -49,9 +50,7 @@ export const JobSearch: React.FC<JobSearchProps> = ({
     cvContext,
     setCvContext
 }) => {
-    const [isSearching, setIsSearching] = useState(false);
-    const [minMatchFilter, setMinMatchFilter] = useState<number>(0);
-    const [addedJobs, setAddedJobs] = useState<Set<string>>(new Set());
+    const [addedJobs, setAddedJobs] = useState<Map<string, string>>(new Map());
 
     // Local state for dropdowns
     const [selectedCountry, setSelectedCountry] = useState<string>('');
@@ -120,23 +119,43 @@ export const JobSearch: React.FC<JobSearchProps> = ({
         setSearchLocation('');
     };
 
-    const handleAdd = async (result: SearchResult) => {
-        const newJob: Job = {
-            id: Date.now().toString(),
-            companyName: result.company,
-            position: result.title,
-            status: JobStatus.TO_BE_APPLIED,
-            url: result.url,
-            dateApplied: new Date().toISOString().split('T')[0],
-            location: searchLocation || 'Remote',
-            notes: matchScores[result.url] ? `AI Match Score: ${matchScores[result.url]}%` : undefined
-        };
-        await onAddJob(newJob);
-        setAddedJobs(prev => new Set(prev).add(result.url));
+    const handleToggleTrack = async (result: SearchResult) => {
+        if (addedJobs.has(result.url)) {
+            // Untrack
+            const jobId = addedJobs.get(result.url);
+            if (jobId) {
+                await onRemoveJob(jobId);
+                setAddedJobs(prev => {
+                    const next = new Map(prev);
+                    next.delete(result.url);
+                    return next;
+                });
+            }
+        } else {
+            // Track
+            const newJob: Job = {
+                id: Date.now().toString(), // Temporary ID
+                companyName: result.company,
+                position: result.title,
+                status: JobStatus.TO_BE_APPLIED,
+                url: result.url,
+                dateApplied: new Date().toISOString().split('T')[0],
+                location: searchLocation || 'Remote',
+                notes: matchScores[result.url] ? `AI Match Score: ${matchScores[result.url]}%` : undefined
+            };
+            const createdId = await onAddJob(newJob);
+            if (createdId) {
+                setAddedJobs(prev => {
+                    const next = new Map(prev);
+                    next.set(result.url, createdId);
+                    return next;
+                });
+            }
 
-        if (!advice[result.url]) {
-            const tips = await generateJobAdvice(result.title, result.company);
-            setAdvice(prev => ({ ...prev, [result.url]: tips }));
+            if (!advice[result.url]) {
+                const tips = await generateJobAdvice(result.title, result.company);
+                setAdvice(prev => ({ ...prev, [result.url]: tips }));
+            }
         }
     };
 
@@ -295,6 +314,7 @@ export const JobSearch: React.FC<JobSearchProps> = ({
                         .sort((a, b) => (matchScores[b.url] || 0) - (matchScores[a.url] || 0)) // Sort by score descending
                         .map((result, index) => {
                             const score = matchScores[result.url];
+                            const isTracked = addedJobs.has(result.url);
                             return (
                                 <div key={index} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:border-blue-300 transition-colors relative overflow-hidden group">
                                     {/* Match Badge */}
@@ -355,17 +375,18 @@ export const JobSearch: React.FC<JobSearchProps> = ({
                                         </div>
 
                                         <button
-                                            onClick={() => handleAdd(result)}
-                                            disabled={addedJobs.has(result.url)}
+                                            onClick={() => handleToggleTrack(result)}
                                             className={`shrink-0 flex items-center gap-2 px-6 py-2.5 rounded-lg transition-all text-sm font-medium sm:mt-0 mt-2 w-full sm:w-auto justify-center shadow-sm
-                            ${addedJobs.has(result.url)
-                                                    ? 'bg-green-100 text-green-700 border border-green-200 cursor-default'
+                            ${isTracked
+                                                    ? 'bg-green-100 text-green-700 border border-green-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200'
                                                     : 'bg-slate-900 text-white hover:bg-slate-800 hover:shadow-md'}`}
                                         >
-                                            {addedJobs.has(result.url) ? (
+                                            {isTracked ? (
                                                 <>
-                                                    <CheckCircle size={16} />
-                                                    Tracked
+                                                    <CheckCircle size={16} className="group-hover:hidden" />
+                                                    <X size={16} className="hidden group-hover:block" />
+                                                    <span className="group-hover:hidden">Tracked</span>
+                                                    <span className="hidden group-hover:inline">Untrack</span>
                                                 </>
                                             ) : (
                                                 <>

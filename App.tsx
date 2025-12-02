@@ -70,13 +70,15 @@ const App: React.FC = () => {
     fetchJobs();
   }, [currentUser]);
 
-  const addJob = async (job: Job) => {
+  const addJob = async (job: Job): Promise<string | null> => {
     // Optimistic update or wait for server? Let's wait for server to get ID
     const { id, ...jobData } = job; // Remove ID if it's temporary
     const newJob = await apiAddJob(jobData);
     if (newJob) {
       setJobs(prev => [...prev, newJob]);
+      return newJob.id;
     }
+    return null;
   };
 
   const updateJobStatus = async (id: string, status: JobStatus) => {
@@ -116,7 +118,9 @@ const App: React.FC = () => {
                           element={
                             <JobSearch
                               companies={companies}
+                              companies={companies}
                               onAddJob={addJob}
+                              onRemoveJob={removeJob}
                               // Pass persisted state
                               query={searchQuery}
                               setQuery={setSearchQuery}
