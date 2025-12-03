@@ -8,6 +8,30 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script>
+    // CRITICAL ERROR TRAP - Must run before anything else
+    window.addEventListener('error', function (e) {
+      document.body.innerHTML = `
+          <div style="color: #ef4444; padding: 20px; font-family: sans-serif; background: white; height: 100vh;">
+            <h1 style="font-size: 24px; margin-bottom: 10px;">Startup Error (Trapped by HTML)</h1>
+            <p style="font-weight: bold; font-size: 18px;">${e.message}</p>
+            <pre style="background: #f3f4f6; padding: 15px; border-radius: 8px; overflow: auto; margin-top: 10px;">${e.error ? e.error.stack : 'No stack trace'}</pre>
+            <div style="margin-top: 20px; padding: 15px; background: #eff6ff; border-radius: 8px;">
+               <p><strong>Tip:</strong> If this says "No apiKey provided", you need to add Environment Variables in Vercel.</p>
+            </div>
+          </div>
+        `;
+    });
+    // Also catch unhandled promise rejections
+    window.addEventListener('unhandledrejection', function (e) {
+      document.body.innerHTML = `
+          <div style="color: #ef4444; padding: 20px; font-family: sans-serif; background: white; height: 100vh;">
+            <h1 style="font-size: 24px; margin-bottom: 10px;">Unhandled Promise Rejection</h1>
+            <p style="font-weight: bold; font-size: 18px;">${e.reason}</p>
+          </div>
+        `;
+    });
+  </script>
+  <script>
     tailwind.config = {
       theme: {
         extend: {
