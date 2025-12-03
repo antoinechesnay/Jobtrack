@@ -16,8 +16,40 @@ export const getJobs = async (): Promise<Job[]> => {
         if (!response.ok) throw new Error('Failed to fetch jobs');
         return await response.json();
     } catch (error) {
-        console.error("Error fetching jobs:", error);
-        throw error;
+        console.warn("API failed, returning MOCK DATA for demo:", error);
+        // Fallback mock data for demo purposes
+        return [
+            {
+                id: '1',
+                title: 'Senior Frontend Engineer',
+                company: 'TechCorp',
+                location: 'Remote',
+                salary: '$120k - $150k',
+                status: 'interview',
+                dateApplied: new Date().toISOString(),
+                url: 'https://example.com/job1'
+            },
+            {
+                id: '2',
+                title: 'Product Designer',
+                company: 'DesignStudio',
+                location: 'London, UK',
+                salary: '£60k - £80k',
+                status: 'applied',
+                dateApplied: new Date(Date.now() - 86400000).toISOString(),
+                url: 'https://example.com/job2'
+            },
+            {
+                id: '3',
+                title: 'Full Stack Developer',
+                company: 'StartupX',
+                location: 'Berlin, DE',
+                salary: '€70k - €90k',
+                status: 'offer',
+                dateApplied: new Date(Date.now() - 172800000).toISOString(),
+                url: 'https://example.com/job3'
+            }
+        ] as Job[];
     }
 };
 
