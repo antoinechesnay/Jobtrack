@@ -1,8 +1,10 @@
 {
+    "buildCommand": "npm run build",
+    "outputDirectory": "dist",
     "rewrites": [
         {
             "source": "/api/:path*",
-            "destination": "http://localhost:8080/api/:path*"
+            "destination": "https://jobtrack-backend-955085072936.europe-west4.run.app/api/:path*"
         },
         {
             "source": "/(.*)",
