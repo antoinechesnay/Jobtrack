@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, NavLink, useLocation, Navigate, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Briefcase, Search, Settings, Building2, Plus, FileText, MonitorPlay, PenTool, LogOut } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Search, Settings, Building2, Plus, FileText, MonitorPlay, PenTool } from 'lucide-react';
 import { CompanyList } from './components/CompanyList';
 import { JobBoard } from './components/JobBoard';
 import { Dashboard } from './components/Dashboard';
@@ -12,30 +12,8 @@ import { CoverLetterGenerator } from './components/CoverLetterGenerator';
 import { parseCompanyData } from './utils';
 import { RAW_OCR_DATA } from './constants';
 import { Company, Job, JobStatus, SearchResult } from './types';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { Login } from './components/Login';
-import { Signup } from './components/Signup';
 import { getJobs, addJob as apiAddJob, updateJob as apiUpdateJob, deleteJob as apiDeleteJob } from './services/jobService';
-import { auth } from './firebase';
-import { signOut } from 'firebase/auth';
 
-const PrivateRoute = ({ children }: { children: React.ReactElement }) => {
-  const { currentUser, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-slate-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (!currentUser) {
-    return <Navigate to="/login" />;
-  }
-
-  return children;
-};
 
 const App: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -50,7 +28,6 @@ const App: React.FC = () => {
   const [searchAdvice, setSearchAdvice] = useState<Record<string, string>>({});
   const [searchCvContext, setSearchCvContext] = useState<{ searchQuery: string, skills: string[] } | null>(null);
 
-  const { currentUser } = useAuth();
 
   useEffect(() => {
     // Hydrate companies from the OCR data
@@ -62,27 +39,23 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const fetchJobs = async (retryCount = 0) => {
-      if (currentUser) {
-        try {
-          const userJobs = await getJobs();
-          console.log("Fetched jobs:", userJobs.length, userJobs);
-          setJobs(userJobs);
-          setError(null);
-        } catch (err) {
-          console.error("Failed to fetch jobs:", err);
-          if (retryCount < 3) {
-            // Retry with exponential backoff
-            setTimeout(() => fetchJobs(retryCount + 1), 1000 * Math.pow(2, retryCount));
-          } else {
-            setError("Failed to load your jobs. Please check your connection.");
-          }
+      try {
+        const userJobs = await getJobs();
+        console.log("Fetched jobs:", userJobs.length, userJobs);
+        setJobs(userJobs);
+        setError(null);
+      } catch (err) {
+        console.error("Failed to fetch jobs:", err);
+        if (retryCount < 3) {
+          // Retry with exponential backoff
+          setTimeout(() => fetchJobs(retryCount + 1), 1000 * Math.pow(2, retryCount));
+        } else {
+          setError("Failed to load your jobs. Please check your connection.");
         }
-      } else {
-        setJobs([]);
       }
     };
     fetchJobs();
-  }, [currentUser]);
+  }, []);
 
   const addJob = async (job: Job): Promise<string | null> => {
     try {
@@ -125,90 +98,75 @@ const App: React.FC = () => {
 
   return (
     <HashRouter>
-      <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-
-          <Route
-            path="/*"
-            element={
-              <PrivateRoute>
-                <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden font-sans">
-                  <Sidebar currentUser={currentUser} />
-                  <main className="flex-1 overflow-y-auto">
-                    <div className="max-w-7xl mx-auto p-4 md:p-8">
-                      {error && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold">Error:</span>
-                            <span>{error}</span>
-                          </div>
-                          <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700">
-                            <span className="sr-only">Dismiss</span>
-                            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                            </svg>
-                          </button>
-                        </div>
-                      )}
-                      <Routes>
-                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                        <Route path="/dashboard" element={<Dashboard jobs={jobs} companies={companies} />} />
-                        <Route path="/companies" element={<CompanyList companies={companies} onFindJobs={(company) => console.log(company)} />} />
-                        <Route path="/board" element={<JobBoard jobs={jobs} onUpdateJob={updateJob} onDelete={removeJob} />} />
-                        <Route
-                          path="/search"
-                          element={
-                            <JobSearch
-                              companies={companies}
-                              onAddJob={addJob}
-                              onRemoveJob={removeJob}
-                              existingJobs={jobUrlMap}
-                              // Pass persisted state
-                              query={searchQuery}
-                              setQuery={setSearchQuery}
-                              location={searchLocation}
-                              setLocation={setSearchLocation}
-                              results={searchResults}
-                              setResults={setSearchResults}
-                              matchScores={searchMatchScores}
-                              setMatchScores={setSearchMatchScores}
-                              advice={searchAdvice}
-                              setAdvice={setSearchAdvice}
-                              cvContext={searchCvContext}
-                              setCvContext={setSearchCvContext}
-                            />
-                          }
-                        />
-                        <Route path="/cv-analysis" element={<CVAnalyzer />} />
-                        <Route path="/interview-prep" element={<InterviewPrep />} />
-                        <Route path="/cover-letter" element={<CoverLetterGenerator />} />
-                      </Routes>
+      <Routes>
+        <Route
+          path="/*"
+          element={
+            <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden font-sans">
+              <Sidebar />
+              <main className="flex-1 overflow-y-auto">
+                <div className="max-w-7xl mx-auto p-4 md:p-8">
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">Error:</span>
+                        <span>{error}</span>
+                      </div>
+                      <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700">
+                        <span className="sr-only">Dismiss</span>
+                        <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </button>
                     </div>
-                  </main>
+                  )}
+                  <Routes>
+                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <Route path="/dashboard" element={<Dashboard jobs={jobs} companies={companies} />} />
+                    <Route path="/companies" element={<CompanyList companies={companies} onFindJobs={(company) => console.log(company)} />} />
+                    <Route path="/board" element={<JobBoard jobs={jobs} onUpdateJob={updateJob} onDelete={removeJob} />} />
+                    <Route
+                      path="/search"
+                      element={
+                        <JobSearch
+                          companies={companies}
+                          onAddJob={addJob}
+                          onRemoveJob={removeJob}
+                          existingJobs={jobUrlMap}
+                          // Pass persisted state
+                          query={searchQuery}
+                          setQuery={setSearchQuery}
+                          location={searchLocation}
+                          setLocation={setSearchLocation}
+                          results={searchResults}
+                          setResults={setSearchResults}
+                          matchScores={searchMatchScores}
+                          setMatchScores={setSearchMatchScores}
+                          advice={searchAdvice}
+                          setAdvice={setSearchAdvice}
+                          cvContext={searchCvContext}
+                          setCvContext={setSearchCvContext}
+                        />
+                      }
+                    />
+                    <Route path="/cv-analysis" element={<CVAnalyzer />} />
+                    <Route path="/interview-prep" element={<InterviewPrep />} />
+                    <Route path="/cover-letter" element={<CoverLetterGenerator />} />
+                  </Routes>
                 </div>
-              </PrivateRoute>
-            }
-          />
-        </Routes>
-      </AuthProvider>
+              </main>
+            </div>
+          }
+        />
+      </Routes>
     </HashRouter>
   );
 };
 
-const Sidebar = ({ currentUser }: { currentUser: any }) => {
+const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      navigate('/login');
-    } catch (error) {
-      console.error("Error signing out:", error);
-    }
-  };
 
   const navItems = [
     { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -247,19 +205,6 @@ const Sidebar = ({ currentUser }: { currentUser: any }) => {
         })}
       </nav>
       <div className="p-4 border-t border-slate-100">
-        {currentUser && (
-          <div className="px-4 py-2 mb-2 text-xs text-slate-500 font-medium truncate">
-            Signed in as:<br />
-            <span className="text-slate-800">{currentUser.email}</span>
-          </div>
-        )}
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 w-full text-left rounded-xl text-slate-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
-        >
-          <LogOut size={20} />
-          Logout
-        </button>
         <div className="flex items-center gap-3 px-4 py-3 text-sm text-slate-500 mt-2">
           <Settings size={18} />
           <span>v1.0.0</span>
