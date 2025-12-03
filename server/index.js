@@ -1,4 +1,3 @@
-
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -45,7 +44,12 @@ const limiter = rateLimit({
     legacyHeaders: false,
 });
 app.use('/api/', limiter);
-app.use('/api/', verifyToken);
+// app.use('/api/', verifyToken);
+// Mock Auth Middleware for No-Login Version
+app.use('/api/', (req, res, next) => {
+    req.user = { uid: 'demo-user-123', email: 'demo@example.com' };
+    next();
+});
 
 app.use(express.json());
 
