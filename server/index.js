@@ -149,15 +149,15 @@ app.post('/api/search-jobs', async (req, res) => {
         Context: Today is ${today}.
         Task: Act as a world-class Job Market Analyst. Your primary goal is to find relevant 20 job listings based on the  ${query}${locationStr} , using the Google Search tool exclusively for grounding.
         
-        
+
         SEARCH STRATEGY:
         1.  **Sources**: Prioritize major boards (LinkedIn, Indeed, Glassdoor, Reed, TotalJobs) and direct Company Career Pages (specifically look for "greenhouse.io", "lever.co", "workday", "ashby").
         2.  **Avoid**: Spammy aggregators, "courses" disguised as jobs, and expired listings.
         
         STRICT QUALITY CONTROL:
-        1.  **Direct Links**: URLs must be specific job postings (e.g. /jobs/123, /view/...), NOT homepages.
-        2.  **Freshness**: Only return jobs posted after ${oneMonthAgo}.
-        3.  **No Hallucinations**: If you can't find 10 real ones, return fewer. Do not make them up.
+        1.  **Direct Links**: URLs must be specific job postings. ACCEPTABLE: /jobs/, /careers/, /view/, /apply/, OR query parameters like ?id=, ?job=, ?jk=.
+        2.  **Freshness**: Prioritize jobs posted after ${oneMonthAgo}. If a job looks relevant and active, include it even if the date is unclear.
+        3.  **No Hallucinations**: Only return jobs you have actually found.
         4.  **Fallback**: If exact matches are low, broaden the search terms slightly but keep the location.
         5.  **Salary**: Look for salary ranges. If not found, use "Competitive".
         
